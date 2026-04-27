@@ -378,13 +378,16 @@ def _plot_stream(name, tr, frame, target_w, target_w_gs, width_scale,
         # Start the sequence near phi1=0 then unwrap
         p1 = (p1 + 180.0) % 360.0 - 180.0
         p1 = np.rad2deg(np.unwrap(np.deg2rad(p1)))
-        # For leading (arm_sign>0) the first tp is the progenitor end; for
-        # trailing the last tp is. Shift the full sequence so the
-        # progenitor-end lands near phi1=0 (it may have drifted by ±360k
-        # during unwrap).
-        if track._arm_sign > 0:
+        # For leading (tp >= 0) the first tp is the progenitor end; for
+        # trailing (tp <= 0) the last tp is. Shift the full sequence so
+        # the progenitor-end lands near phi1=0 (it may have drifted by
+        # ±360k during unwrap). Derive arm sign from the public tp grid
+        # (the StreamTrack base class no longer carries _arm_sign post the
+        # base/fitter split refactor).
+        tp_grid = track.tp_grid()
+        if tp_grid[0] >= 0.0:  # leading: tp in [0, tp_hi]
             ref_idx = 0
-        else:
+        else:  # trailing: tp in [tp_lo, 0]
             ref_idx = -1
         shift = 360.0 * np.round(p1[ref_idx] / 360.0)
         p1 = p1 - shift
