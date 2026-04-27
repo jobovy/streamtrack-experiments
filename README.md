@@ -24,7 +24,6 @@ streamtrack-experiments/
 ├── notebooks/
 │   ├── stream_track_examples.ipynb           Bovy14 + Pal5 worked examples
 │   ├── gd1_track_example.ipynb               GD-1 with custom_transform
-│   ├── powerlaw_df_demo.ipynb                Smoothing-DF demo
 │   └── galstream_stress_test.ipynb           ~30 streams from galstreams (~30 MB)
 │
 ├── scripts/
@@ -123,9 +122,6 @@ Plots in `plots/warm_stream/warm_test_{cold,warm}_*.png`.
   streams from the `galstreams` library to flush out edge cases. Large
   (~30 MB) because every stream has a multi-panel plot. Drives:
   `scripts/run_all_streams.py` + `scripts/stress_test_helpers.py`.
-
-* **`powerlaw_df_demo.ipynb`** — early experiment using a power-law DF
-  for the smoothing weights. Not used in the final PR.
 
 ## Scripts
 
