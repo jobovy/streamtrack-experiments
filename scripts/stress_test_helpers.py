@@ -201,7 +201,7 @@ def _measure_stream_length(base, sim_frame, prog):
 
 
 def _sample_tracks(progenitor, mass_msun, tdisrupt_gyr, n, seed_l=42,
-                   seed_t=43, smoothing=None):
+                   seed_t=43, smoothing=None, smoothing_factor=1.0):
     M_int = mass_msun / conversion.mass_in_msol(220.0, 8.0)
     spdf_l = fardal15spraydf(pot=MWPotential2014, progenitor=progenitor,
                              tdisrupt=tdisrupt_gyr * u.Gyr, leading=True,
@@ -212,18 +212,21 @@ def _sample_tracks(progenitor, mass_msun, tdisrupt_gyr, n, seed_l=42,
     np.random.seed(seed_l)
     xv_l, dt_l = spdf_l._sample_tail(n, integrate=True, leading=True)
     tl = spdf_l.streamTrack(particles=(xv_l, dt_l), tail="leading", order=2,
-                            smoothing=smoothing)
+                            smoothing=smoothing,
+                            smoothing_factor=smoothing_factor)
     np.random.seed(seed_t)
     xv_t, dt_t = spdf_t._sample_tail(n, integrate=True, leading=False)
     tt = spdf_t.streamTrack(particles=(xv_t, dt_t), tail="trailing", order=2,
-                            smoothing=smoothing)
+                            smoothing=smoothing,
+                            smoothing_factor=smoothing_factor)
     return dict(spdf_l=spdf_l, spdf_t=spdf_t, tl=tl, tt=tt,
                 xv_l=xv_l, xv_t=xv_t, dt_l=dt_l, dt_t=dt_t)
 
 
 def run_stream(track_name, initial_mass_msun=4e4, tdisrupt_gyr=5.0, n=700,
                max_refine_iters=1, conv_tol=0.20, width_scale=0.3,
-               match_length=True, show=True, smoothing=None):
+               match_length=True, show=True, smoothing=None,
+               smoothing_factor=1.0):
     """Stress-test streamTrack on a single galstreams stream.
 
     ``match_length``: also iterate tdisrupt to match galstreams' track
@@ -254,7 +257,8 @@ def run_stream(track_name, initial_mass_msun=4e4, tdisrupt_gyr=5.0, n=700,
     sim_frame = _align_rot(prog)
 
     def _build_and_measure(mass, tdisr):
-        b = _sample_tracks(prog, mass, tdisr, n, smoothing=smoothing)
+        b = _sample_tracks(prog, mass, tdisr, n, smoothing=smoothing,
+                           smoothing_factor=smoothing_factor)
         sl, nl = _measure_width_phi2(b["tl"], sim_frame)
         st, nt = _measure_width_phi2(b["tt"], sim_frame)
         parts = [(s, k) for s, k in [(sl, nl), (st, nt)]

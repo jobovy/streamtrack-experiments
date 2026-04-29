@@ -25,6 +25,7 @@ def _worker(name):
         matplotlib.use("Agg")
         from stress_test_helpers import run_stream
         smoothing = os.environ.get("GALSTREAM_SMOOTHING") or None
+        smoothing_factor = float(os.environ.get("GALSTREAM_SMOOTHING_FACTOR", "1.0"))
         n_particles = int(os.environ.get("GALSTREAM_N", "500"))
         result = run_stream(
             name,
@@ -35,6 +36,7 @@ def _worker(name):
             match_length=True,
             show=True,
             smoothing=smoothing,
+            smoothing_factor=smoothing_factor,
         )
         with open(f"{RESULTS_DIR}/{name}.pkl", "wb") as f:
             pickle.dump(result, f)
