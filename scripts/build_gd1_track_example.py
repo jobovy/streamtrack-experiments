@@ -150,14 +150,12 @@ def wrap180(x):
     return ((numpy.asarray(x) + 180) % 360) - 180
 
 def orbit_in_koposov(orbit, ts):
-    ra = numpy.asarray(orbit.ra(ts))
-    dec = numpy.asarray(orbit.dec(ts))
-    pp = coords.radec_to_custom(ra, dec, T=R_GD1, degree=True)
-    phi1 = wrap180(pp[:, 0])
-    # Break at phi1 wrap
+    phi1 = wrap180(orbit.phi1(ts, T=R_GD1))
+    phi2 = numpy.asarray(orbit.phi2(ts, T=R_GD1))
+    # Break at phi1 wrap (for clean plotting)
     jumps = numpy.abs(numpy.diff(phi1)) > 180
     p1 = phi1.astype(float).copy(); p1[:-1][jumps] = numpy.nan
-    return p1, pp[:, 1], orbit.pmra(ts), orbit.pmdec(ts), orbit.vlos(ts)
+    return p1, phi2, orbit.pmra(ts), orbit.pmdec(ts), orbit.vlos(ts)
 
 p1, p2, pmra_orb, pmdec_orb, vlos_orb = orbit_in_koposov(WB_prog, ts)
 ra_orb = numpy.asarray(WB_prog.ra(ts))

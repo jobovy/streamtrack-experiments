@@ -161,12 +161,10 @@ rotation-matrix bookkeeping in the notebook).
 In this frame the stream runs horizontally with phi₂ ≈ 0; the ±σ band
 around the mean line is the true cross-stream width."""))
 
-cells.append(code("""# Scatter the same samples (transform their sky coords to customsky)
-p1_s, p2_s = coords.radec_to_custom(
-    numpy.atleast_1d(samples.ra()),
-    numpy.atleast_1d(samples.dec()),
-    T=T, degree=True,
-).T
+cells.append(code("""# Scatter the same samples — Orbit's phi1/phi2 accessors take T=
+# directly so no manual radec_to_custom is needed.
+p1_s = samples.phi1(T=T)
+p2_s = samples.phi2(T=T)
 
 fig, axes = pyplot.subplots(2, 1, figsize=(12, 7))
 ax = axes[0]; pyplot.sca(ax)
@@ -180,13 +178,8 @@ ax.set_ylim(12, -12); ax.legend()
 ax.set_title("progenitor-L aligned sky with ±σ_φ2 band")
 
 # Proper-motion band in the same frame
-pm_p1_s, pm_p2_s = coords.pmrapmdec_to_custom(
-    numpy.atleast_1d(samples.pmra()),
-    numpy.atleast_1d(samples.pmdec()),
-    numpy.atleast_1d(samples.ra()),
-    numpy.atleast_1d(samples.dec()),
-    T=T, degree=True,
-).T
+pm_p1_s = samples.pmphi1(T=T)
+pm_p2_s = samples.pmphi2(T=T)
 
 ax = axes[1]; pyplot.sca(ax)
 ax.scatter(p1_s, pm_p2_s, s=2, alpha=0.3, color="0.7", label="samples")

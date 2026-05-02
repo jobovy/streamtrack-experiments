@@ -64,33 +64,11 @@ def _sky_to_phi12(ra_deg, dec_deg, frame, wrap_center=None):
 
 
 def _align_rot(prog):
-    from galpy.util import _rotate_to_arbitrary_vector
-
-    sun = Orbit([0, 0, 0, 0, 0, 0], radec=True)
-    sun.vxvv[0][1] = sun.vxvv[0][2] = sun.vxvv[0][4] = 0.0
-    sun.turn_physical_off()
-    p = prog()
-    p.turn_physical_off()
-    dx = p.x() - sun.x()
-    dy = p.y() - sun.y()
-    dz = p.z() - sun.z()
-    dvx = p.vx() - sun.vx()
-    dvy = p.vy() - sun.vy()
-    dvz = p.vz() - sun.vz()
-    Lx = dy * dvz - dz * dvy
-    Ly = dz * dvx - dx * dvz
-    Lz = dx * dvy - dy * dvx
-    l_pole = np.degrees(np.arctan2(Ly, -Lx))
-    b_pole = np.degrees(np.arctan2(Lz, np.sqrt(Lx ** 2 + Ly ** 2)))
-    radec = np.asarray(coords.lb_to_radec(l_pole, b_pole, degree=True))
-    ra_pole = float(radec[0, 0]) if radec.ndim == 2 else float(radec[0])
-    dec_pole = float(radec[0, 1]) if radec.ndim == 2 else float(radec[1])
-    L_eq = np.array([
-        np.cos(np.radians(dec_pole)) * np.cos(np.radians(ra_pole)),
-        np.cos(np.radians(dec_pole)) * np.sin(np.radians(ra_pole)),
-        np.sin(np.radians(dec_pole)),
-    ])
-    return _rotate_to_arbitrary_vector(np.atleast_2d(L_eq), [0.0, 0.0, 1.0])[0]
+    # Galpy's Orbit.align_to_orbit (PR #874) returns the rotation matrix
+    # that puts the orbit's plane at phi2=0 and centers the progenitor at
+    # phi1=center_phi1. Pass center_phi1=0.0 so prog lands at phi1=0,
+    # which downstream callers expect (they later subtract prog_phi1 ~ 0).
+    return prog.align_to_orbit(center_phi1=0.0)
 
 
 def _unwrap_around(values, center):
@@ -174,12 +152,12 @@ def _measure_stream_length(base, sim_frame, prog):
     (approximates what galstreams' track_length measures).
 
     Computed as the 2–98 percentile phi1 range of the spray particles
-    from both arms combined, relative to the progenitor."""
-    prog_phi1_raw, _ = _sky_to_phi12(
-        np.array([prog.ra()]), np.array([prog.dec()]), sim_frame
-    )
-    prog_phi1 = float(prog_phi1_raw[0])
+    from both arms combined, relative to the progenitor.
 
+    ``sim_frame`` comes from ``_align_rot`` which uses
+    ``prog.align_to_orbit(center_phi1=0)``, so the progenitor sits at
+    phi1 ≈ 0 by construction — no manual progenitor-phi1 subtraction
+    needed."""
     xl, yl, zl, _ = _particles_physical(base["xv_l"])
     xt, yt, zt, _ = _particles_physical(base["xv_t"])
     ra_l, dec_l = _cart_to_radec(xl, yl, zl)
@@ -190,7 +168,6 @@ def _measure_stream_length(base, sim_frame, prog):
         if len(ra) == 0:
             continue
         p1, _ = _sky_to_phi12(ra, dec, sim_frame)
-        p1 = p1 - prog_phi1
         p1 = (p1 + 180.0) % 360.0 - 180.0
         # Arm span: percentile range (excludes outliers/wrapping tails)
         lo, hi = np.percentile(p1, [2, 98])
@@ -355,14 +332,12 @@ def _plot_stream(name, tr, frame, target_w, target_w_gs, width_scale,
     ra_l, dec_l = _cart_to_radec(xl, yl, zl)
     ra_t, dec_t = _cart_to_radec(xt, yt, zt)
 
-    prog_phi1_raw, prog_phi2 = _sky_to_phi12(
-        np.array([prog.ra()]), np.array([prog.dec()]), sim_frame
-    )
-    prog_phi1 = float(prog_phi1_raw[0])
+    # sim_frame comes from prog.align_to_orbit(center_phi1=0), so the
+    # progenitor sits at phi1 ≈ 0 and the manual subtraction is gone.
+    prog_phi2 = np.array([float(prog.phi2(T=sim_frame, use_physical=True))])
 
     def to_sim(ra, dec):
-        p1, p2 = _sky_to_phi12(ra, dec, sim_frame, wrap_center=prog_phi1)
-        return p1 - prog_phi1, p2
+        return _sky_to_phi12(ra, dec, sim_frame, wrap_center=0.0)
 
     phi1_sim_l, phi2_sim_l = to_sim(ra_l, dec_l)
     phi1_sim_t, phi2_sim_t = to_sim(ra_t, dec_t)
@@ -378,9 +353,8 @@ def _plot_stream(name, tr, frame, target_w, target_w_gs, width_scale,
             return (np.array([]),) * 3
         tps_dense = np.linspace(lo, hi, 120)
         p1_raw, p2_raw, s = _per_tp_width(track, sim_frame, tps_dense, 150)
-        p1 = p1_raw - prog_phi1
-        # Start the sequence near phi1=0 then unwrap
-        p1 = (p1 + 180.0) % 360.0 - 180.0
+        # Progenitor at phi1 ≈ 0 by construction (align_to_orbit center_phi1=0).
+        p1 = (p1_raw + 180.0) % 360.0 - 180.0
         p1 = np.rad2deg(np.unwrap(np.deg2rad(p1)))
         # For leading (tp >= 0) the first tp is the progenitor end; for
         # trailing (tp <= 0) the last tp is. Shift the full sequence so

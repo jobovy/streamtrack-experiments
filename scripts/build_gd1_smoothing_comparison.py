@@ -120,14 +120,16 @@ xt, yt, zt, _ = _particles_physical(xv_t)
 ra_l, dec_l = _cart_to_radec(xl, yl, zl)
 ra_t, dec_t = _cart_to_radec(xt, yt, zt)
 
-prog_phi1_arr, _ = _sky_to_phi12(numpy.array([prog.ra()]),
-                                  numpy.array([prog.dec()]), sim_frame)
-prog_phi1 = float(prog_phi1_arr[0])
-print(f'progenitor phi1 in sim frame = {prog_phi1:.2f} deg')
+# stress_test_helpers._align_rot now wraps prog.align_to_orbit(center_phi1=0)
+# (galpy PR #874), so the progenitor sits at phi1 ≈ 0 by construction —
+# no manual subtraction needed.
+print(f'progenitor (phi1, phi2) in sim frame = '
+      f'({float(prog.phi1(T=sim_frame)):.4f}, '
+      f'{float(prog.phi2(T=sim_frame)):.4f}) deg')
 
 def to_sim(ra, dec):
-    p1, p2 = _sky_to_phi12(ra, dec, sim_frame, wrap_center=prog_phi1)
-    return p1 - prog_phi1, p2
+    p1, p2 = _sky_to_phi12(ra, dec, sim_frame, wrap_center=0.0)
+    return p1, p2
 
 phi1_l, phi2_l = to_sim(ra_l, dec_l)
 phi1_t, phi2_t = to_sim(ra_t, dec_t)"""))
