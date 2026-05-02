@@ -140,7 +140,7 @@ cells.append(code("""def _arm_curve(track, n_dense=120, n_samples=150):
         return (numpy.array([]),) * 3
     tps = numpy.linspace(lo, hi, n_dense)
     p1_raw, p2, sig = _per_tp_width(track, sim_frame, tps, n_samples=n_samples)
-    p1 = p1_raw - prog_phi1
+    p1 = p1_raw  # progenitor at phi1 ≈ 0 already (align_to_orbit center_phi1=0)
     p1 = (p1 + 180.0) % 360.0 - 180.0
     p1 = numpy.rad2deg(numpy.unwrap(numpy.deg2rad(p1)))
     # Anchor near phi1=0 at the progenitor end (tp=0)
