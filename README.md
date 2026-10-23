@@ -11,6 +11,22 @@ The `streamspray-track` branch on the galpy repo is the version that
 shipped; everything here is the **scratch directory** of experiments
 around it.
 
+## Update (2026-10): `method='pspline'` is the default
+
+galpy PRs [#1731](https://github.com/jobovy/galpy/pull/1731) (feat/backends)
+and [#1732](https://github.com/jobovy/galpy/pull/1732) (main) add a second
+track reconstruction, `method='pspline'`, and make it the default. It projects
+each particle continuously onto the progenitor's orbit and fits a weighted
+penalized spline to the particles, with REML smoothing per coordinate. The
+track is then a smooth function of the progenitor's parameters, which the
+previous `binned` reconstruction (closest orbit sample, bins, GCV splines) was
+not. `binned` remains available.
+
+The notebooks below were re-run against #1732. `pspline_vs_binned.ipynb` is
+new and shows why the default changed. Re-running them also turned up a bug in
+the pspline fit with `niter > 0`, fixed in both PRs: iterations clamped the
+particles beyond the track's end onto it.
+
 ## Directory layout
 
 ```
@@ -22,8 +38,11 @@ streamtrack-experiments/
 ├── WARM_STREAM_RESULTS.md            Combined-algorithm warm/cold results
 │
 ├── notebooks/
-│   ├── stream_track_examples.ipynb           Bovy14 + Pal5 worked examples
-│   ├── gd1_track_example.ipynb               GD-1 with custom_transform
+│   ├── stream_track_examples.ipynb           Bovy14 worked examples
+│   ├── gd1_track_example.ipynb               GD-1 vs DESI DR2
+│   ├── gd1_smoothing_comparison.ipynb        GD-1 smoothing-factor sweep
+│   ├── pspline_vs_binned.ipynb               why pspline is the default
+│   ├── streamspraydf_new_mass_strippingtimes_features.ipynb
 │   └── galstream_stress_test.ipynb           ~30 streams from galstreams (~30 MB)
 │
 ├── scripts/
@@ -33,6 +52,7 @@ streamtrack-experiments/
 │   ├── triaxial_plot.py                      renders TRIAXIAL_COMPARISON figures
 │   ├── build_stream_track_examples.py        regenerates stream_track_examples.ipynb
 │   ├── build_gd1_track_example.py            regenerates gd1_track_example.ipynb
+│   ├── build_pspline_vs_binned.py            regenerates pspline_vs_binned.ipynb
 │   └── build_stress_test_nb.py               regenerates galstream_stress_test.ipynb
 │
 ├── results/
@@ -113,8 +133,23 @@ Plots in `plots/warm_stream/warm_test_{cold,warm}_*.png`.
   transforms, smoothing reuse. The `streamspraydf` tutorial in galpy is
   a trimmed-down version of this.
 
-* **`gd1_track_example.ipynb`** — GD-1-like stream with `custom_transform`
-  set up via `Orbit.align_to_orbit()`. The plots in `plots/gd1_example/`
+* **`pspline_vs_binned.ipynb`** — the two reconstructions on the Bovy (2014)
+  stream: agreement on the same particles, the track as a function of the
+  progenitor's v_T, finite-difference derivatives, seed-to-seed scatter, and
+  fit time and memory.
+
+* **`gd1_smoothing_comparison.ipynb`** — GD-1 refit at
+  `smoothing_factor` ∈ {0.01, 1, 100} on one particle sample, and against
+  `method='binned'`. Uses `stress_test_helpers` (needs `galstreams`).
+
+* **`streamspraydf_new_mass_strippingtimes_features.ipynb`** — the
+  time-dependent progenitor mass and `stripping_pdf=` features.
+
+* **`gd1_track_example.ipynb`** — GD-1 tracks against the Jarvis et al.
+  (2026) DESI DR2 members, with the sky frame set up via
+  `Orbit.align_to_orbit()`; sections 9–11 cover smoothing and the
+  reconstruction method, pericenter-bunched stripping, and a dissolved
+  progenitor. The plots in `plots/gd1_example/`
   are this notebook's outputs at three different progenitor variants
   (`gd1_*`, `gd1b_*`, `gd1c_*`).
 
@@ -139,10 +174,10 @@ Plots in `plots/warm_stream/warm_test_{cold,warm}_*.png`.
 * **`triaxial_plot.py`** — renders the three implementations on the
   triaxial-NFW test (`plots/triaxial/`).
 
-* **`build_*.py`** — these are the notebook *generators*: each
-  programmatically writes the corresponding `.ipynb` file in
-  `notebooks/`. Re-run them after editing if you want to refresh
-  outputs.
+* **`build_*.py`** — the notebook *generators*: each programmatically
+  writes the corresponding `.ipynb` file in `notebooks/`. Except for
+  `build_pspline_vs_binned.py`, they only produced the first versions: the
+  notebooks have since been edited directly and are the source of truth.
 
 ## Reproducing
 
@@ -155,6 +190,16 @@ time of writing but may not still exist there.
 # in a galpy clone, on the streamspray-track branch
 python streamtrack-experiments/scripts/compare_alternatives.py streamspray-track
 ```
+
+To re-execute the notebooks:
+
+```bash
+cd notebooks
+export GD1_DATA_DIR=/path/to/Jarvis_GD1_DESI_DR2_Zenodo   # unzipped zenodo:19258456
+TQDM_DISABLE=1 jupyter nbconvert --to notebook --execute --inplace <name>.ipynb
+```
+
+`TQDM_DISABLE=1` keeps progress bars out of the saved outputs.
 
 ## Status
 
