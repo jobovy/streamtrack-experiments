@@ -12,6 +12,7 @@ import astropy.units as u
 import galstreams
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas
 from astropy.coordinates import SkyCoord
 
 from galpy.df import fardal15spraydf
@@ -31,7 +32,10 @@ _mws = None
 def get_mws():
     global _mws
     if _mws is None:
-        _mws = galstreams.MWStreams(verbose=False, implement_Off=False)
+        # galstreams writes ints into str columns, which pandas >= 3's
+        # inferred string dtype rejects
+        with pandas.option_context("future.infer_string", False):
+            _mws = galstreams.MWStreams(verbose=False, implement_Off=False)
     return _mws
 
 
